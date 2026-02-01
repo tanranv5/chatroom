@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+/* Apple HIG Design System */
+:root {
+  /* System Font Stack */
+  --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', SFMono-Regular, Menlo, Monaco, monospace;
+
+  /* Apple System Colors - Light Mode */
+  --system-blue: #007AFF;
+  --system-green: #34C759;
+  --system-indigo: #5856D6;
+  --system-orange: #FF9500;
+  --system-pink: #FF2D55;
+  --system-purple: #AF52DE;
+  --system-red: #FF3B30;
+  --system-teal: #5AC8FA;
+  --system-yellow: #FFCC00;
+
+  /* Gray Scale */
+  --system-gray: #8E8E93;
+  --system-gray2: #AEAEB2;
+  --system-gray3: #C7C7CC;
+  --system-gray4: #D1D1D6;
+  --system-gray5: #E5E5EA;
+  --system-gray6: #F2F2F7;
+
+  /* Semantic Colors */
+  --label-primary: #000000;
+  --label-secondary: rgba(60, 60, 67, 0.6);
+  --label-tertiary: rgba(60, 60, 67, 0.3);
+  --label-quaternary: rgba(60, 60, 67, 0.18);
+
+  /* Backgrounds */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F2F2F7;
+  --bg-tertiary: #FFFFFF;
+
+  /* Separators */
+  --separator: rgba(60, 60, 67, 0.29);
+  --separator-opaque: #C6C6C8;
+
+  /* Spacing (8pt Grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Animation */
+  --ease-default: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --duration-fast: 200ms;
+  --duration-normal: 300ms;
+}
+
+/* Dark Mode - Using .dark class */
+.dark {
+  --system-blue: #0A84FF;
+  --system-green: #30D158;
+  --system-indigo: #5E5CE6;
+  --system-orange: #FF9F0A;
+  --system-pink: #FF375F;
+  --system-purple: #BF5AF2;
+  --system-red: #FF453A;
+  --system-teal: #64D2FF;
+  --system-yellow: #FFD60A;
+
+  --system-gray: #8E8E93;
+  --system-gray2: #636366;
+  --system-gray3: #48484A;
+  --system-gray4: #3A3A3C;
+  --system-gray5: #2C2C2E;
+  --system-gray6: #1C1C1E;
+
+  --label-primary: #FFFFFF;
+  --label-secondary: rgba(235, 235, 245, 0.6);
+  --label-tertiary: rgba(235, 235, 245, 0.3);
+  --label-quaternary: rgba(235, 235, 245, 0.18);
+
+  --bg-primary: #000000;
+  --bg-secondary: #1C1C1E;
+  --bg-tertiary: #2C2C2E;
+
+  --separator: rgba(84, 84, 88, 0.6);
+  --separator-opaque: #38383A;
+}
+
+@theme inline {
+  --color-background: var(--bg-secondary);
+  --color-foreground: var(--label-primary);
+  --font-sans: var(--font-system);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-secondary);
+  color: var(--label-primary);
+  font-family: var(--font-system);
+  font-size: 17px;
+  line-height: 1.47;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 主题切换平滑过渡 - 应用于所有颜色相关属性 */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: var(--duration-normal);
+  transition-timing-function: var(--ease-default);
+}
+
+/* 禁用首次加载时的过渡（防止闪烁） */
+html:not(.theme-ready) *,
+html:not(.theme-ready) *::before,
+html:not(.theme-ready) *::after {
+  transition: none !important;
+}
+
+/* 隐藏滚动条但保持滚动功能 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 消息气泡动画 - Apple 风格 */
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.message-animate {
+  animation: messageIn var(--duration-normal) var(--ease-default);
+}
+
+/* 图片加载动画 */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.image-loading {
+  background: linear-gradient(90deg, var(--system-gray6) 25%, var(--system-gray5) 50%, var(--system-gray6) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* 输入框焦点样式 - Apple 风格 */
+.input-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.3);
+}
+
+/* 按钮点击效果 - Apple 风格 */
+.btn-press {
+  transition: transform var(--duration-fast) var(--ease-default), opacity var(--duration-fast) var(--ease-default);
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* Safe Area */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
