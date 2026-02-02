@@ -293,8 +293,8 @@ export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
 
           {/* Timestamp */}
           <div className="flex items-center gap-1.5 mt-1">
-            {/* 私密标签 - 仅自己可见 */}
-            {message.isPublishedToSquare === false && (
+            {/* 私密标签 - 仅自己可见，失败消息不显示 */}
+            {message.isPublishedToSquare === false && !message.content.startsWith('⚠️') && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded"
                 style={{
