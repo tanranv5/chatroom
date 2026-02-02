@@ -25,6 +25,9 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# 安装 OpenSSL（Prisma 需要）
+RUN apk add --no-cache openssl
+
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
