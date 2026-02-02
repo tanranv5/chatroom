@@ -54,7 +54,7 @@ set -e
 # 如果数据库文件不存在，自动创建表结构
 if [ ! -f /app/prisma/dev.db ]; then
   echo "初始化数据库..."
-  ./node_modules/.bin/prisma db push --skip-generate
+  node ./node_modules/prisma/build/index.js db push --skip-generate
 fi
 exec node server.js
 EOF

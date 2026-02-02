@@ -8,7 +8,7 @@
 - **图片生成** — 文生图 / 图生图，支持多张参考图
 - **广场展示** — 用户可将满意的作品发布到公共广场
 - **内容审核** — 关键词过滤 + AI 审核模型双重拦截
-- **管理后台** — 智能体管理、消息管理、全局设置
+- **管理后台** — 智能体管理、消息管理、全局设置（所有配置均可在后台动态修改）
 - **深色模式** — 跟随系统 / 手动切换
 - **语音输入** — 语音转文字（需配置语音识别 API）
 
@@ -23,15 +23,14 @@
 
 ### Docker 部署（推荐）
 
+镜像托管在 GitHub Container Registry：
+
 ```bash
 docker run -d \
   --name chatroom \
   -p 3000:3000 \
   -v chatroom-data:/app/prisma \
-  -e IMAGE_API_URL=你的图片生成API地址 \
-  -e IMAGE_API_KEY=你的API密钥 \
-  -e IMAGE_MODEL=模型名称 \
-  tanranv6/chatroom:latest
+  ghcr.io/tanranv5/chatroom:latest
 ```
 
 docker-compose：
@@ -40,30 +39,24 @@ docker-compose：
 version: "3.8"
 services:
   chatroom:
-    image: tanranv6/chatroom:latest
+    image: ghcr.io/tanranv5/chatroom:latest
     ports:
       - "3000:3000"
     volumes:
       - chatroom-data:/app/prisma
-    environment:
-      - IMAGE_API_URL=你的图片生成API地址
-      - IMAGE_API_KEY=你的API密钥
-      - IMAGE_MODEL=模型名称
     restart: unless-stopped
 
 volumes:
   chatroom-data:
 ```
 
+> **说明：** 首次启动会自动初始化数据库。所有 API 配置（图片生成、图床、语音识别、内容审核等）均可在管理后台「全局设置」中配置，无需设置环境变量。
+
 ### 本地开发
 
 ```bash
 # 安装依赖
 npm install
-
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env，填写必要的 API 配置
 
 # 初始化数据库
 npx prisma generate
@@ -91,24 +84,19 @@ npm run start
 pm2 start npm --name chatroom -- run start
 ```
 
-## 环境变量
+## 管理后台
 
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `IMAGE_API_URL` | 是 | 图片生成 API 端点 |
-| `IMAGE_API_KEY` | 是 | 图片生成 API 密钥 |
-| `IMAGE_MODEL` | 是 | 图片生成模型名称 |
-| `IMAGEBED_URL` | 否 | 图床服务地址 |
-| `IMAGEBED_TOKEN` | 否 | 图床认证 Token |
-| `SPEECH_API_URL` | 否 | 语音识别 API 端点 |
-| `SPEECH_API_KEY` | 否 | 语音识别 API 密钥 |
-| `MODERATION_API_URL` | 否 | 内容审核模型 API 端点 |
-| `MODERATION_API_KEY` | 否 | 内容审核模型 API 密钥 |
-| `MODERATION_MODEL` | 否 | 内容审核模型名称 |
-| `ADMIN_DEFAULT_PASSWORD` | 否 | 管理后台默认密码（默认 admin123） |
-| `ADMIN_TOKEN_SECRET` | 否 | Token 签名密钥（生产环境务必修改） |
+访问 `/admin` 进入管理后台，默认密码：`admin123`
 
-> 以上配置也可在管理后台「全局设置」中动态修改，数据库配置优先级高于环境变量。
+**全局设置支持配置：**
+
+| 配置项 | 说明 |
+|--------|------|
+| 图片生成 API | API 地址、密钥、模型名称 |
+| 图床服务 | 图床地址、认证 Token |
+| 语音识别 API | API 地址、密钥 |
+| 内容审核 API | API 地址、密钥、模型名称 |
+| 管理密码 | 后台登录密码 |
 
 ## 项目结构
 
@@ -121,6 +109,7 @@ src/
 │   │   ├── square/    # 广场数据
 │   │   ├── settings/  # 全局设置
 │   │   └── user/      # 用户信息
+│   ├── admin/         # 管理后台页面
 │   ├── layout.tsx     # 根布局
 │   └── page.tsx       # 首页
 ├── components/        # React 组件
@@ -128,7 +117,7 @@ src/
 └── lib/               # 工具库
 prisma/
 ├── schema.prisma      # 数据模型
-└── dev.db             # SQLite 数据库文件
+└── dev.db             # SQLite 数据库文件（运行时生成）
 ```
 
 ## License
