@@ -5,8 +5,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 // 用户表 - 基于 IP 识别
@@ -22,30 +22,30 @@ model User {
 // 全局配置表 - 统一管理 API 设置和安全配置
 model Settings {
   id              String   @id @default("global")
-  imageApiUrl     String   @default("") // 图像生成 API 端点
-  imageApiKey     String   @default("") // 图像生成 API 密钥
-  imageModel      String   @default("") // 图像生成模型
-  speechApiUrl    String   @default("") // 语音识别 API 端点
-  speechApiKey    String   @default("") // 语音识别 API 密钥
-  moderationApiUrl   String @default("")  // 审查模型 API 端点
-  moderationApiKey   String @default("")  // 审查模型 API 密钥
-  moderationModel    String @default("")  // 审查模型名称
-  imagebedUrl     String   @default("")  // 图床服务地址
-  imagebedToken   String   @default("")  // 图床认证 Token
-  adminPassword   String   @default("")  // 管理密码（哈希存储）
-  adminTokenSecret String  @default("")  // Token 签名密钥
+  imageApiUrl     String   @default("") @db.VarChar(500) // 图像生成 API 端点
+  imageApiKey     String   @default("") @db.VarChar(500) // 图像生成 API 密钥
+  imageModel      String   @default("") @db.VarChar(200) // 图像生成模型
+  speechApiUrl    String   @default("") @db.VarChar(500) // 语音识别 API 端点
+  speechApiKey    String   @default("") @db.VarChar(500) // 语音识别 API 密钥
+  moderationApiUrl   String @default("") @db.VarChar(500)  // 审查模型 API 端点
+  moderationApiKey   String @default("") @db.VarChar(500)  // 审查模型 API 密钥
+  moderationModel    String @default("") @db.VarChar(200)  // 审查模型名称
+  imagebedUrl     String   @default("") @db.VarChar(500)  // 图床服务地址
+  imagebedToken   String   @default("") @db.VarChar(500)  // 图床认证 Token
+  adminPassword   String   @default("") @db.VarChar(200)  // 管理密码（哈希存储）
+  adminTokenSecret String  @default("") @db.VarChar(200)  // Token 签名密钥
   updatedAt       DateTime @updatedAt
 }
 
 // AI 智能体表
 model Agent {
   id           String    @id @default(cuid())
-  name         String
-  avatar       String
-  description  String
-  skills       String    // 特长描述
-  systemPrompt String    // 系统提示词
-  policyPrompt String?   // 安全/行为规则提示词
+  name         String    @db.VarChar(100)
+  avatar       String    @db.VarChar(500)
+  description  String    @db.Text
+  skills       String    @db.Text // 特长描述
+  systemPrompt String    @db.Text // 系统提示词
+  policyPrompt String?   @db.Text // 安全/行为规则提示词
   isActive     Boolean   @default(true)
   minContentLength  Int  @default(0) // 文案最小字数要求
   minReferenceImages Int @default(0) // 图生图需要的最少参考图数量
@@ -57,10 +57,10 @@ model Agent {
 // 消息表 - 全部公开可见
 model Message {
   id                   String   @id @default(cuid())
-  content              String   // 用户输入的文本描述
-  imageData            String?  // 图片 base64 数据 (生成的图或参考图)
-  referenceImagesJson  String?  // 多张参考图 JSON（用于回显与审查，内容可能较大）
-  type                 String   // 'text' | 'image'
+  content              String   @db.Text // 用户输入的文本描述
+  imageData            String?  @db.LongText // 图片 base64 数据 (生成的图或参考图)
+  referenceImagesJson  String?  @db.LongText // 多张参考图 JSON（用于回显与审查，内容可能较大）
+  type                 String   @db.VarChar(20) // 'text' | 'image'
   userId               String
   agentId              String
   generationTime       Int?     // 生成耗时(毫秒)

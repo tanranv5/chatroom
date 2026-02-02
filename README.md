@@ -16,7 +16,7 @@
 
 - **前端：** Next.js 16 + React 19 + Tailwind CSS 4
 - **后端：** Next.js API Routes + SSE 流式响应
-- **数据库：** Prisma ORM + SQLite
+- **数据库：** Prisma ORM + MySQL
 - **部署：** Docker / Node.js
 
 ## 快速开始
@@ -29,11 +29,11 @@
 docker run -d \
   --name chatroom \
   -p 3000:3000 \
-  -v chatroom-data:/app/prisma \
+  -e DATABASE_URL="mysql://user:password@host:3306/chatroom" \
   ghcr.io/tanranv5/chatroom:latest
 ```
 
-docker-compose：
+docker-compose（含 MySQL）：
 
 ```yaml
 version: "3.8"
@@ -42,21 +42,43 @@ services:
     image: ghcr.io/tanranv5/chatroom:latest
     ports:
       - "3000:3000"
+    environment:
+      - DATABASE_URL=mysql://chatroom:chatroom123@mysql:3306/chatroom
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root123
+      - MYSQL_DATABASE=chatroom
+      - MYSQL_USER=chatroom
+      - MYSQL_PASSWORD=chatroom123
     volumes:
-      - chatroom-data:/app/prisma
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
 volumes:
-  chatroom-data:
+  mysql-data:
 ```
 
-> **说明：** 首次启动会自动初始化数据库。所有 API 配置（图片生成、图床、语音识别、内容审核等）均可在管理后台「全局设置」中配置，无需设置环境变量。
+> **说明：** 首次启动会自动初始化数据库表结构。所有 API 配置（图片生成、图床、语音识别、内容审核等）均可在管理后台「全局设置」中配置。
 
 ### 本地开发
 
 ```bash
 # 安装依赖
 npm install
+
+# 配置数据库连接（创建 .env 文件）
+echo 'DATABASE_URL="mysql://user:password@localhost:3306/chatroom"' > .env
 
 # 初始化数据库
 npx prisma generate
@@ -83,6 +105,14 @@ npm run start
 ```bash
 pm2 start npm --name chatroom -- run start
 ```
+
+## 环境变量
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `DATABASE_URL` | 是 | MySQL 连接字符串，格式：`mysql://user:password@host:3306/database` |
+
+> 其他配置（图片生成 API、图床、语音识别、内容审核等）均在管理后台「全局设置」中配置。
 
 ## 管理后台
 
@@ -116,8 +146,7 @@ src/
 ├── contexts/          # Context Provider
 └── lib/               # 工具库
 prisma/
-├── schema.prisma      # 数据模型
-└── dev.db             # SQLite 数据库文件（运行时生成）
+└── schema.prisma      # 数据模型
 ```
 
 ## License

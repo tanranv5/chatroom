@@ -15,7 +15,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# 生成 Prisma Client（使用已安装的 prisma）
+# 生成 Prisma Client
 RUN ./node_modules/.bin/prisma generate
 
 # 构建 Next.js（standalone 模式）
@@ -38,30 +38,18 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# 拷贝 Prisma 相关文件
+# 拷贝 Prisma 相关文件（schema 用于 db push）
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
-# 数据库目录权限（挂载卷时需要写权限）
-RUN chown -R nextjs:nodejs /app/prisma
-
-# 启动脚本：初始化数据库 + 启动服务
-COPY <<'EOF' /app/entrypoint.sh
-#!/bin/sh
-set -e
-# 如果数据库文件不存在，自动创建表结构
-if [ ! -f /app/prisma/dev.db ]; then
-  echo "初始化数据库..."
-  node ./node_modules/prisma/build/index.js db push --skip-generate
-fi
-exec node server.js
-EOF
-RUN chmod +x /app/entrypoint.sh
+# 设置权限
+RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["/app/entrypoint.sh"]
+# 启动脚本：初始化数据库 + 启动服务
+CMD ["sh", "-c", "node ./node_modules/prisma/build/index.js db push --skip-generate && exec node server.js"]
