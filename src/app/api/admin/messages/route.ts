@@ -29,10 +29,10 @@ export async function GET(request: NextRequest) {
 
     if (keyword) {
       where.OR = [
-        { content: { contains: keyword, mode: 'insensitive' } },
-        { user: { nickname: { contains: keyword, mode: 'insensitive' } } },
+        { content: { contains: keyword } },
+        { user: { nickname: { contains: keyword } } },
         { user: { ip: { contains: keyword } } },
-        { agent: { name: { contains: keyword, mode: 'insensitive' } } },
+        { agent: { name: { contains: keyword } } },
       ]
     }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -30,7 +30,7 @@ interface ChatMessage {
 
 const PAGE_SIZE = 10;
 
-export default function MessageAdminPage() {
+function MessageAdminContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -356,5 +356,17 @@ export default function MessageAdminPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MessageAdminPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-xl text-gray-600">加载中...</div>
+      </div>
+    }>
+      <MessageAdminContent />
+    </Suspense>
   );
 }

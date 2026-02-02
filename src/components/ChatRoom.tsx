@@ -47,14 +47,14 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
           const formattedMessages: Message[] = (data.data.messages as ApiMessage[]).map((msg) => ({
             id: msg.id,
             content: msg.content,
-            imageUrl: msg.imageData,
+            imageUrl: msg.imageData ?? undefined,
             referenceImages: Array.isArray(msg.referenceImages) ? msg.referenceImages : undefined,
             type: msg.type,
             sender: msg.sender,
             senderName: msg.senderName,
             senderAvatar: msg.senderAvatar,
             timestamp: new Date(msg.timestamp),
-            generationTime: msg.generationTime,
+            generationTime: msg.generationTime ?? undefined,
             isPublishedToSquare: msg.isPublishedToSquare,
           }));
           setMessages(formattedMessages);

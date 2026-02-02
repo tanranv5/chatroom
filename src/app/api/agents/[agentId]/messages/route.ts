@@ -139,9 +139,9 @@ function buildImagePromptMessages(
     messages.push({
       role: 'user',
       content: [
-        { type: 'text', text: userContent },
+        { type: 'text' as const, text: userContent },
         ...referenceImages.map(img => ({
-          type: 'image_url',
+          type: 'image_url' as const,
           image_url: { url: img }
         }))
       ]
