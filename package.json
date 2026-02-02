@@ -13,6 +13,7 @@
     "@prisma/client": "5.22.0",
     "agentation": "^1.3.2",
     "date-fns": "^4.1.0",
+    "mysql2": "^3.16.2",
     "next": "16.0.10",
     "prisma": "5.22.0",
     "react": "19.2.1",

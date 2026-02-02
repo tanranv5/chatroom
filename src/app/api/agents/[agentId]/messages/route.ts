@@ -25,23 +25,46 @@ function safeParseStringArrayJson(text: string | null | undefined): string[] | n
 
 // 获取客户端 IP 地址
 function getClientIP(request: NextRequest): string {
+  // 优先从常见的代理头获取
   const forwarded = request.headers.get('x-forwarded-for')
   const realIP = request.headers.get('x-real-ip')
+  const cfConnectingIP = request.headers.get('cf-connecting-ip') // Cloudflare
 
-  if (forwarded) {
-    return forwarded.split(',')[0].trim()
+  if (cfConnectingIP) {
+    return cfConnectingIP.trim()
   }
 
   if (realIP) {
-    return realIP
+    return realIP.trim()
+  }
+
+  if (forwarded) {
+    // x-forwarded-for 可能包含多个 IP，第一个是客户端真实 IP
+    const firstIP = forwarded.split(',')[0].trim()
+    // 过滤掉内网 IP
+    if (!isPrivateIP(firstIP)) {
+      return firstIP
+    }
   }
 
   return '127.0.0.1'
 }
 
+// 判断是否为内网 IP
+function isPrivateIP(ip: string): boolean {
+  if (ip === '127.0.0.1' || ip === 'localhost') return true
+  if (ip.startsWith('192.168.')) return true
+  if (ip.startsWith('10.')) return true
+  if (ip.startsWith('172.')) {
+    const second = parseInt(ip.split('.')[1], 10)
+    if (second >= 16 && second <= 31) return true
+  }
+  return false
+}
+
 // 根据 IP 获取地理位置并生成昵称
 async function generateNickname(ip: string): Promise<string> {
-  if (ip === '127.0.0.1' || ip === 'localhost' || ip.startsWith('192.168.')) {
+  if (isPrivateIP(ip)) {
     return '本地用户'
   }
 
@@ -331,6 +354,28 @@ async function runImageFlowSse(options: {
   const { controller, encoder, agent, user, content, referenceImages, publishToSquare } = options
   const step = createStepReporter({ controller, encoder, trace: `messages:${agent.id}` })
   const startTime = Date.now() // 提前记录开始时间，用于计算耗时
+  let closed = false
+
+  const safeClose = () => {
+    if (!closed) {
+      closed = true
+      try {
+        controller.close()
+      } catch {
+        // 忽略关闭错误
+      }
+    }
+  }
+
+  const safeEnqueue = (event: string, data: unknown) => {
+    if (!closed) {
+      try {
+        enqueueSseEvent(controller, encoder, event, data)
+      } catch {
+        // 忽略写入错误
+      }
+    }
+  }
 
   try {
     const userMessage = await prisma.message.create({
@@ -343,14 +388,14 @@ async function runImageFlowSse(options: {
         isPublishedToSquare: publishToSquare
       }
     })
-    enqueueSseEvent(controller, encoder, 'user-message', {
+    safeEnqueue('user-message', {
       id: userMessage.id,
       content: userMessage.content,
       timestamp: userMessage.createdAt
     })
     step('1/8 已保存用户消息', { messageId: userMessage.id })
 
-    enqueueSseEvent(controller, encoder, 'generating', {
+    safeEnqueue('generating', {
       status: 'processing',
       message: '正在创作中...'
     })
@@ -364,7 +409,6 @@ async function runImageFlowSse(options: {
     }
     step('3/8 已读取全局配置')
 
-    const startTime = Date.now()
     const promptMessages = buildImagePromptMessages(agent.systemPrompt, content, referenceImages)
     const summaryPromise = summarizeContent({ moderation: moderationConfig, content })
     step('4/8 已构建提示词并启动摘要')
@@ -376,11 +420,11 @@ async function runImageFlowSse(options: {
       referenceImageCount: referenceImages.length
     })
     if (!auditResult.allowed) {
-      enqueueSseEvent(controller, encoder, 'error', {
+      safeEnqueue('error', {
         code: 'CONTENT_BLOCKED',
         message: auditResult.reason || '内容未通过审核'
       })
-      controller.close()
+      safeClose()
       return
     }
     step('5/8 审核通过')
@@ -416,42 +460,47 @@ async function runImageFlowSse(options: {
     })
     step('8/8 已落库 AI 消息', { messageId: aiMessage.id, generationTime: genResult.generationTime })
 
-    enqueueSseEvent(controller, encoder, 'ai-message', {
+    safeEnqueue('ai-message', {
       id: aiMessage.id,
       content: aiMessage.content,
       imageData: aiMessage.imageData,
       timestamp: aiMessage.createdAt
     })
-    enqueueSseEvent(controller, encoder, 'done', { generationTime: genResult.generationTime })
-    controller.close()
+    safeEnqueue('done', { generationTime: genResult.generationTime })
+    safeClose()
   } catch (error) {
     console.error('生成图片失败:', error)
 
     // 生成失败也要入库，保存错误消息
     const errorMessage = error instanceof Error ? error.message : '生成失败'
-    const failedMessage = await prisma.message.create({
-      data: {
-        content: `⚠️ 生成失败：${errorMessage}`,
-        imageData: null,
-        type: 'text',
-        userId: user.id,
-        agentId: agent.id,
-        generationTime: Date.now() - startTime,
-        isPublishedToSquare: false
-      }
-    })
+    try {
+      const failedMessage = await prisma.message.create({
+        data: {
+          content: `⚠️ 生成失败：${errorMessage}`,
+          imageData: null,
+          type: 'text',
+          userId: user.id,
+          agentId: agent.id,
+          generationTime: Date.now() - startTime,
+          isPublishedToSquare: false
+        }
+      })
 
-    enqueueSseEvent(controller, encoder, 'ai-message', {
-      id: failedMessage.id,
-      content: failedMessage.content,
-      imageData: null,
-      timestamp: failedMessage.createdAt
-    })
-    enqueueSseEvent(controller, encoder, 'error', {
+      safeEnqueue('ai-message', {
+        id: failedMessage.id,
+        content: failedMessage.content,
+        imageData: null,
+        timestamp: failedMessage.createdAt
+      })
+    } catch (dbError) {
+      console.error('保存失败消息到数据库失败:', dbError)
+    }
+
+    safeEnqueue('error', {
       code: 'AI_SERVICE_ERROR',
       message: errorMessage
     })
-    controller.close()
+    safeClose()
   }
 }
 
