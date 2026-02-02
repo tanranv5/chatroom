@@ -151,7 +151,7 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
         if (data?.success && data?.data?.id) {
           effectiveUser = {
             id: data.data.id,
-            name: data.data.nickname || '本地用户',
+            name: data.data.nickname || '我',
             avatar: data.data.avatar || '',
           };
           setCurrentUser(effectiveUser);
@@ -160,6 +160,19 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
         console.error('加载用户信息失败:', error);
       }
     }
+
+    // 先添加用户消息（乐观更新）
+    const tempUserMessageId = `temp-user-${Date.now()}`;
+    const userMessage: Message = {
+      id: tempUserMessageId,
+      content,
+      referenceImages: imagesToSend,
+      type: imagesToSend && imagesToSend.length > 0 ? 'image' : 'text',
+      sender: 'user',
+      senderName: effectiveUser?.name || '我',
+      senderAvatar: effectiveUser?.avatar || '',
+      timestamp: new Date(),
+    };
 
     // 添加 AI 加载中消息
     const loadingMessage: Message = {
@@ -172,7 +185,7 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, loadingMessage]);
+    setMessages(prev => [...prev, userMessage, loadingMessage]);
 
     try {
       // 调用消息保存和生成 API（使用 SSE 流式响应）
@@ -221,20 +234,12 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
 
           switch (event) {
             case 'user-message':
-              // 添加用户消息
-              setMessages(prev => {
-                const filtered = prev.filter(m => m.id !== loadingMessage.id);
-                return [...filtered, {
-                  id: data.id,
-                  content,
-                  referenceImages: imagesToSend,
-                  type: imagesToSend && imagesToSend.length > 0 ? 'image' : 'text',
-                  sender: 'user',
-                  senderName: effectiveUser?.name || '本地用户',
-                  senderAvatar: effectiveUser?.avatar || '',
-                  timestamp: new Date(data.timestamp),
-                }, loadingMessage];
-              });
+              // 用服务器返回的真实 ID 替换临时 ID
+              setMessages(prev => prev.map(m =>
+                m.id === tempUserMessageId
+                  ? { ...m, id: data.id, timestamp: new Date(data.timestamp) }
+                  : m
+              ));
               break;
 
             case 'step':
@@ -271,12 +276,13 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
       }
     } catch (error) {
       console.error('生成失败:', error);
+      const errorMsg = error instanceof Error ? error.message : '生成失败';
       // 移除加载消息，显示错误
       setMessages(prev => {
         const filtered = prev.filter(m => m.id !== loadingMessage.id);
         const errorMessage: Message = {
           id: `error-${Date.now()}`,
-          content: '生成失败',
+          content: `⚠️ ${errorMsg}`,
           type: 'text',
           sender: 'ai',
           senderName: agent.name,
