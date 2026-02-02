@@ -44,9 +44,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modul
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 
+# 创建启动脚本
+RUN printf '#!/bin/sh\nset -e\necho "Initializing database..."\nnode ./node_modules/prisma/build/index.js db push --skip-generate\necho "Starting server..."\nexec node server.js\n' > /app/start.sh && \
+    chmod +x /app/start.sh && \
+    chown nextjs:nodejs /app/start.sh
+
 USER nextjs
 
 EXPOSE 3000
 
-# 启动脚本：初始化数据库 + 启动服务
-CMD ["sh", "-c", "node ./node_modules/prisma/build/index.js db push --skip-generate && exec node server.js"]
+ENTRYPOINT ["/bin/sh", "/app/start.sh"]
