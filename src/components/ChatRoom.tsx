@@ -16,7 +16,6 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar: string } | null>(null);
 
   type ApiMessage = {
     id: string;
@@ -51,8 +50,9 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
             referenceImages: Array.isArray(msg.referenceImages) ? msg.referenceImages : undefined,
             type: msg.type,
             sender: msg.sender,
-            senderName: msg.senderName,
-            senderAvatar: msg.senderAvatar,
+            // 聊天室内用户统一显示"我"
+            senderName: msg.sender === 'user' ? '我' : msg.senderName,
+            senderAvatar: msg.sender === 'user' ? '' : msg.senderAvatar,
             timestamp: new Date(msg.timestamp),
             generationTime: msg.generationTime ?? undefined,
             isPublishedToSquare: msg.isPublishedToSquare,
@@ -81,29 +81,6 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
       })
     );
   }, [agent.name, agent.avatar]);
-
-  // 获取当前用户（根据 IP 识别）
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const resp = await fetch('/api/user');
-        const data = await resp.json();
-        if (!cancelled && data?.success && data?.data?.id) {
-          setCurrentUser({
-            id: data.data.id,
-            name: data.data.nickname || '我',
-            avatar: data.data.avatar || '',
-          });
-        }
-      } catch (error) {
-        console.error('加载用户信息失败:', error);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // 发送消息
   const handleSend = useCallback(async (content: string, referenceImages?: string[], publishToSquare?: boolean) => {
@@ -142,25 +119,6 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
     const imagesToSend = referenceImages?.slice(0, maxImages);
     setIsGenerating(true);
 
-    // 确保当前用户已加载（用于发送消息的昵称/头像显示）
-    let effectiveUser = currentUser;
-    if (!effectiveUser) {
-      try {
-        const resp = await fetch('/api/user');
-        const data = await resp.json();
-        if (data?.success && data?.data?.id) {
-          effectiveUser = {
-            id: data.data.id,
-            name: data.data.nickname || '我',
-            avatar: data.data.avatar || '',
-          };
-          setCurrentUser(effectiveUser);
-        }
-      } catch (error) {
-        console.error('加载用户信息失败:', error);
-      }
-    }
-
     // 先添加用户消息（乐观更新）
     const tempUserMessageId = `temp-user-${Date.now()}`;
     const userMessage: Message = {
@@ -169,8 +127,8 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
       referenceImages: imagesToSend,
       type: imagesToSend && imagesToSend.length > 0 ? 'image' : 'text',
       sender: 'user',
-      senderName: effectiveUser?.name || '我',
-      senderAvatar: effectiveUser?.avatar || '',
+      senderName: '我',
+      senderAvatar: '',
       timestamp: new Date(),
     };
 
@@ -294,7 +252,7 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
     } finally {
       setIsGenerating(false);
     }
-  }, [agent, currentUser]);
+  }, [agent]);
 
   return (
     <div
@@ -316,7 +274,6 @@ export default function ChatRoom({ agent, onBack }: ChatRoomProps) {
       ) : (
         <MessageList
           messages={messages}
-          currentUserId={currentUser?.id || ''}
         />
       )}
 

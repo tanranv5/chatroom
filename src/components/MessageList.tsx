@@ -6,10 +6,9 @@ import MessageBubble from './MessageBubble';
 
 interface MessageListProps {
   messages: Message[];
-  currentUserId: string;
 }
 
-export default function MessageList({ messages, currentUserId }: MessageListProps) {
+export default function MessageList({ messages }: MessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
